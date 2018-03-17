@@ -5,26 +5,50 @@ from flask import Flask, request, render_template, session, flash, redirect, \
     url_for, jsonify
 from celery import Celery
 
-app = Flask(__name__)
+# Initialize Flask
+flask_app = Flask(__name__)
 
 # Celery configuration
-app.config['CELERY_BROKER_URL'] = 'amqp://'
-app.config['CELERY_RESULT_BACKEND'] = 'amqp://'
+flask_app.config.update(
+    CELERY_BROKER_URL='amqp://',
+    CELERY_RESULT_BACKEND='amqp://'
+)
 
-# Initialize Celery
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'])
+def make_celery(app):
+    celery = Celery(
+        flask_app.import_name, backend=app.config['CELERY_RESULT_BACKEND'],
+        broker=app.config['CELERY_BROKER_URL'],
+        include=['tasks']
+    )
+    celery.conf.update(app.config)
+    TaskBase = celery.Task
+
+    class ContextTask(TaskBase):
+        abstract = True
+
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+    celery.Task = ContextTask
+    return celery
+
+
+# Create Celery object
+celery = make_celery(flask_app)
+
+# Import tasks (after the celery object is created)
+from tasks import predict as tasks_predict
 
 # Flask routes
 
-@app.route('/predict', methods=['POST'])
+@flask_app.route('/predict', methods=['POST'])
 def predict():
+
     # TODO: upload image, call Celery predict task
+    tasks_predict.delay(2, 3)
     return jsonify({'status': 'GOT IT'}), 202
 
-@app.route('/status/<task_id>')
+@flask_app.route('/status/<task_id>')
 def status(task_id):
     # TODO: return task status
     return jsonify({'task_id': task_id, 'status': 'PREDICTING'})
-
-if __name__ == '__main__':
-    app.run(debug=True)
