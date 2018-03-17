@@ -1,9 +1,21 @@
 import os
 import time
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import default_exceptions
+from werkzeug.exceptions import HTTPException
 from flask import Flask, request, render_template, session, flash, redirect, \
     url_for, jsonify, send_from_directory
 from celery import Celery
+
+
+# Make JSON error
+def make_json_error(ex):
+    response = jsonify(message=str(ex))
+    response.status_code = (ex.code
+                            if isinstance(ex, HTTPException)
+                            else 500)
+    return response
+
 
 # InvalidUsage exception
 class InvalidUsage(Exception):
@@ -21,10 +33,19 @@ class InvalidUsage(Exception):
         rv['message'] = self.message
         return rv
 
-
 # Initialize Flask
 flask_app = Flask(__name__)
 
+# Make JSON-oriented exceptions
+for code in default_exceptions:
+    flask_app.register_error_handler(code, make_json_error)
+
+# Custom exception
+@flask_app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
 
 # Configuration
 flask_app.config.update(
@@ -74,20 +95,17 @@ def predict():
     # check if the POST request has the file part
     print(request.files)
     if 'file' not in request.files:
-        return jsonify({'error': 'no file key'}), 400
-        # raise InvalidUsage('No file part', status_code=400)
+        raise InvalidUsage('No file part', status_code=400)
     
     file = request.files['file']
     
     # browser also submit an empty part without filename if user does not select a file
     if file.filename == '':
-        return jsonify({'error': 'empty filename'}), 400
-        # raise InvalidUsage('No selected file', status_code=400)
+        raise InvalidUsage('No selected file', status_code=400)
     
     # check if file extension is allowed
     if not file or not allowed_file(file.filename):
-        return jsonify({'error': 'extension not allowed'}), 400
-        # raise InvalidUsage('File extension not allowed', status_code=400)
+        raise InvalidUsage('File extension not allowed', status_code=400)
     
     # save file
     filename = secure_filename(file.filename)
