@@ -3,9 +3,16 @@ from app import celery
 import time
 
 @celery.task(bind=True)
-def predict(self, x, y):
-    # TODO: long calculations here
-    self.update_state('PROGRESS')
-    time.sleep(10)
-    result = x + y
-    return {'status': 'Completed', 'result': result}
+def predict(self, filename):
+    # Open image
+    
+    # TODO: predict if it's a cat or a dog
+    self.update_state(state='PROGRESS', meta={'status': 'Running'})
+    time.sleep(5)
+    self.update_state(state='PROGRESS', meta={'status': 'Running 2'})
+    time.sleep(5)
+    self.update_state(state='PROGRESS', meta={'status': 'Running 3'})
+    time.sleep(5)
+    self.update_state(state='PROGRESS', meta={'status': 'Running 4'})
+    time.sleep(5)
+    return {'status': 'Completed', 'result': filename}

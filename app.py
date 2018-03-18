@@ -50,8 +50,9 @@ def handle_invalid_usage(error):
 # Configuration
 flask_app.config.update(
     CELERY_BROKER_URL='amqp://',
-    CELERY_RESULT_BACKEND='amqp://',
-    UPLOAD_FOLDER='upload'
+    CELERY_RESULT_BACKEND='redis://localhost',
+    UPLOAD_FOLDER='upload',
+    result_backend='redis://'
 )
 
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg', 'png', 'gif'])
@@ -63,7 +64,7 @@ def allowed_file(filename):
 
 def make_celery(app):
     celery = Celery(
-        flask_app.import_name, backend=app.config['CELERY_RESULT_BACKEND'],
+        flask_app.import_name,
         broker=app.config['CELERY_BROKER_URL'],
         include=['tasks']
     )
@@ -113,12 +114,33 @@ def predict():
     timestamp = str(int(time.time()))   # seconds since Epoch
     file.save(os.path.join(flask_app.config['UPLOAD_FOLDER'], f_name + '-' + timestamp + '.' + f_ext))
     
-    # TODO: long running computation intensive task here
+    # Make a prediction on the image
+    task = tasks_predict.delay(os.path.join(flask_app.config['UPLOAD_FOLDER'], f_name + '-' + timestamp + '.' + f_ext))
     
-    return jsonify({'status': 'GOT IT'}), 202
+    return jsonify({'status': 'GOT IT'}), 202, {'Location': url_for('status', task_id=task.id)}
 
 
 @flask_app.route('/status/<task_id>')
 def status(task_id):
-    # TODO: return task status
-    return jsonify({'task_id': task_id, 'status': 'PREDICTING'})
+    task = tasks_predict.AsyncResult(task_id)
+    
+    if task.state == 'PENDING':
+        response = {
+            'state': task.state,
+            'status': 'Pending'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+    else:
+        # failure
+        response = {
+            'state': task.state,
+            'status': str(task.info)    # info on exception raised
+        }
+    
+    return jsonify(response)
