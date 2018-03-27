@@ -52,7 +52,9 @@ flask_app.config.update(
     CELERY_BROKER_URL='amqp://',
     CELERY_RESULT_BACKEND='redis://localhost',
     UPLOAD_FOLDER='upload',
-    result_backend='redis://'
+    result_backend='redis://',
+    data_folder='/home/giuseppe/data/dogscats/',
+    torch_model='/home/giuseppe/data/dogscats/models/224_all.h5'
 )
 
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg', 'png', 'gif'])
@@ -136,6 +138,8 @@ def status(task_id):
         }
         if 'result' in task.info:
             response['result'] = task.info['result']
+            response['cat_prob'] = task.info['cat_prob']
+            response['dog_prob'] = task.info['dog_prob']
     else:
         # failure
         response = {
