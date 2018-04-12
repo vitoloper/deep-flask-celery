@@ -16,10 +16,8 @@ sz=224
 # Disable CUDA
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-# Load the model, load data and create a learner
+# Load the model
 model = torch.load(celery.conf['torch_model'], map_location=lambda storage, location: storage)
-data = ImageClassifierData.from_paths(celery.conf['data_folder'], tfms=tfms_from_model(model, sz))
-learn = Learner.from_model_data(model, data)
 
 @celery.task(bind=True)
 def predict(self, filename):
@@ -33,8 +31,8 @@ def predict(self, filename):
     # T(x): make a tensor
     # V(x): make a Variable (A PyTorch Variable is a wrapper around a PyTorch Tensor, and represents a node in a computational graph.)
     # http://pytorch.org/tutorials/beginner/pytorch_with_examples.html#pytorch-variables-and-autograd
-    learn.model.eval()
-    preds = to_np(learn.model(V(T(im[None]))))
+    model.eval()
+    preds = to_np(model(V(T(im[None]))))
     np.exp(preds)
 
     print(np.argmax(preds))     # 0: cat, 1: dog 
