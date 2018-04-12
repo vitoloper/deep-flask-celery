@@ -1,0 +1,148 @@
+<!doctype html>
+<title>Dog vs Cat Prediction (fast.ai resnet34)</title>
+
+<style>
+    body { padding: 20px }
+    form { display: block; margin: 20px auto; background: #eee; border-radius: 10px; padding: 15px }
+    h1 { text-align: center }
+    .progress { position:relative; width:400px; border: 1px solid #ddd; padding: 1px; border-radius: 3px; }
+    .bar { background-color: #B4F5B4; width:0%; height:20px; border-radius: 3px; }
+    .percent { position:absolute; display:inline-block; top:3px; left:48%; }
+</style>
+
+{% block body %}
+  <h1>Dog vs Cat Prediction</h1>
+  <form method="post" enctype="multipart/form-data" action="/predict">
+    <p><input type="file" name="file"></p>
+    <input type="submit" value="Upload">
+  </form>
+  
+  
+    <div class="progress">
+        <div class="bar"></div >
+        <div class="percent">0%</div >
+    </div>
+    
+    <br>
+    <div id="status"></div>
+    <br>
+    
+    <div id="prediction" style="display: none; ">
+        <h3>Prediction</h3>
+        State: <span id="pred_state"></span><br>
+        Status: <span id="pred_status"></span><br>
+        Result: <span id="pred_result"></span><br>
+        Cat probability: <span id="pred_cat_prob"></span><br>
+        Dog probability: <span id="pred_dog_prob"></span><br>
+        <br>
+        <div id="pred_description"></div>
+    </div>
+    
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.js"></script>
+    <script src="http://malsup.github.com/jquery.form.js"></script>
+    <script>
+    (function() {
+        var intervalHandler;
+        var bar = $('.bar');
+        var percent = $('.percent');
+        var status = $('#status');
+           
+        $('form').ajaxForm({
+            beforeSend: function() {
+                status.empty();
+                var percentVal = '0%';
+                bar.width(percentVal)
+                percent.html(percentVal);
+                // $('#prediction').css('display', 'none');                
+                $('#pred_state').html('');
+                $('#pred_status').html('');
+                $('#pred_cat_prob').html('');
+                $('#pred_dog_prob').html('');
+                $('#pred_result').html('');
+                $('#pred_description').html('');
+                $(':submit').attr('disabled', true);
+            },
+            uploadProgress: function(event, position, total, percentComplete) {
+                var percentVal = percentComplete + '%';
+                bar.width(percentVal)
+                percent.html(percentVal);
+            },
+            success: function(responseText) {
+                var percentVal = '100%';
+                bar.width(percentVal);
+                percent.html(percentVal);
+                // status.html(responseText)
+                status.html('File successfully uploaded')
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                // console.log(xhr)
+                var percentVal = '0%';
+                bar.width(percentVal)
+                percent.html(percentVal);
+                status.html(JSON.parse(xhr.responseText).message)
+                $(':submit').removeAttr('disabled');
+            },
+            // complete will trigger even if there was an error, so check the location header.
+        	complete: function(xhr) {
+                var headers = xhr.getAllResponseHeaders();
+                
+                // Convert the header string into an array of individual headers
+                var arr = headers.trim().split(/[\r\n]+/);
+                
+                // Create a map of header names to values
+                var headerMap = {};
+                arr.forEach(function (line) {
+                  var parts = line.split(': ');
+                  var header = parts.shift();
+                  var value = parts.join(': ');
+                  headerMap[header] = value;
+                });
+                
+                var location = headerMap['location'];
+                if (!location) return;
+                
+                $('#prediction').css('display', 'inline');
+                
+                // Polling 'Location' until we get a result
+                function poll () {
+                    $.get(location, function (data) {
+                        console.log(data);
+                        $('#pred_state').html(data.state);
+                        $('#pred_status').html(data.status);
+                        
+                        if (data.state === 'SUCCESS') {
+                            $('#pred_result').html(data.result);
+                            $('#pred_cat_prob').html(data.cat_prob);
+                            $('#pred_dog_prob').html(data.dog_prob);
+                            if (data.result === 'cat') {
+                                $('#pred_description').html('The image was classified as a <strong>CAT</strong>.');
+                            } else {
+                                $('#pred_description').html('The image was classified as a <strong>DOG</strong>.');
+                            }
+                            if (intervalHandler) window.clearInterval(intervalHandler);
+                            $(':submit').removeAttr('disabled');
+                        }
+                        
+                    });
+                }
+                
+                // Make the first call as soon as possible, then every 3 seconds.
+                poll();
+                intervalHandler = window.setInterval(poll, 3000);
+        	}
+        });
+
+    })();       
+    </script>
+      
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <ul class=flashes>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+  
+{% endblock %}

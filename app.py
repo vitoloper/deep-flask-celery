@@ -148,3 +148,7 @@ def status(task_id):
         }
     
     return jsonify(response)
+
+@flask_app.route('/')
+def render_main_page():
+    return render_template('index.html')
