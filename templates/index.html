@@ -12,6 +12,8 @@
 
 {% block body %}
   <h1>Dog vs Cat Prediction</h1>
+  <p>This is a deep learning (CNN) image classification web application based on <a href="http://flask.pocoo.org/">Flask</a>, <a href="http://www.celeryproject.org/">Celery</a> and the <a href="https://github.com/fastai/fastai">fast.ai library</a>.</p>
+  <p>It uses the resnet34 model, trained to classify images which belong either to the 'cat' class or to the 'dog' class.</p>
   <form method="post" enctype="multipart/form-data" action="/predict">
     <p><input type="file" name="file"></p>
     <input type="submit" value="Upload">
