@@ -50,10 +50,8 @@ def handle_invalid_usage(error):
 # Configuration
 flask_app.config.update(
     CELERY_BROKER_URL='amqp://',
-    CELERY_RESULT_BACKEND='redis://localhost',
     UPLOAD_FOLDER='upload',
     result_backend='redis://',
-    data_folder='/home/giuseppe/data/dogscats/',
     torch_model='/home/giuseppe/data/dogscats/models/224_all.h5'
 )
 

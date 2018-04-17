@@ -99,7 +99,13 @@
                 });
                 
                 var location = headerMap['location'];
-                if (!location) return;
+                if (!location) {
+                    // Check 'Location' too (e.g. Firefox browser)
+                    location = headerMap['Location'];
+                }
+                // Check again if no location header
+                if (!location)
+                    return;
                 
                 $('#prediction').css('display', 'inline');
                 
