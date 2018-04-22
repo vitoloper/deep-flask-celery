@@ -52,7 +52,7 @@ flask_app.config.update(
     CELERY_BROKER_URL='amqp://',
     UPLOAD_FOLDER='upload',
     result_backend='redis://',
-    torch_model='/home/giuseppe/data/dogscats/models/224_all.h5'
+    torch_model='224_resnet34_quick_precompfalse.h5'
 )
 
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg', 'png', 'gif'])
