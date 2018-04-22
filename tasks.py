@@ -36,7 +36,6 @@ def predict(self, filename):
     # http://pytorch.org/tutorials/beginner/pytorch_with_examples.html#pytorch-variables-and-autograd
     convnet.model.eval()
     preds = to_np(convnet.model(V(T(im[None]))))
-    np.exp(preds)
 
     print(np.argmax(preds))     # 0: cat, 1: dog 
     print(np.exp(preds))
